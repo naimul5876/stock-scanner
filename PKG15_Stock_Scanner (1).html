@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PKG-15 Stock Counter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #063B6E;
+    --blue-light: #0d5aa7;
+    --green: #1a7a3a;
+    --red: #c0392b;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --border: #d0dae6;
+    --text: #1a1a2e;
+    --muted: #6b7a90;
+  }
+  body {
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--blue);
+    color: white;
+    padding: 14px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .header-title { font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
+  .header-sub { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+  .count-badge {
+    background: #FFD600;
+    color: #1a1a1a;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--blue);
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .tab.active {
+    color: #FFD600;
+    border-bottom-color: #FFD600;
+  }
+
+  /* PAGES */
+  .page { display: none; padding: 14px; }
+  .page.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 12px;
+  }
+
+  /* SCANNER */
+  #scanner-box {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    min-height: 220px;
+    position: relative;
+  }
+  #html5-qrcode-button-camera-stop,
+  #html5-qrcode-button-camera-start { display: none !important; }
+
+  .scan-btn {
+    width: 100%;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .scan-btn.start { background: var(--blue); color: white; }
+  .scan-btn.stop { background: #e74c3c; color: white; }
+  .scan-btn:active { transform: scale(0.97); }
+
+  /* RESULT BOX */
+  .result-box {
+    background: #eaf4ff;
+    border: 1.5px solid #b0d4f1;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 10px 0;
+    display: none;
+  }
+  .result-box.show { display: block; }
+  .result-item-code {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .result-desc {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--blue);
+    word-break: break-word;
+  }
+  .result-scanned {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-family: monospace;
+  }
+
+  /* MANUAL INPUT */
+  .input-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .input-group label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 5px;
+  }
+  .input-group input {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-size: 15px;
+    color: var(--text);
+    background: #fafcff;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input:focus { border-color: var(--blue-light); }
+
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+  }
+  .submit-btn:active { transform: scale(0.97); opacity: 0.9; }
+  .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--green);
+    color: white;
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .toast.show { opacity: 1; }
+
+  /* LIST PAGE */
+  .list-topbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .search-input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-size: 13px;
+    outline: none;
+    background: white;
+  }
+  .export-btn {
+    padding: 9px 14px;
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .item-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .item-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .item-desc {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    flex: 1;
+    word-break: break-word;
+  }
+  .item-qty-badge {
+    background: var(--blue);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .item-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .item-meta span { display: flex; align-items: center; gap: 3px; }
+  .delete-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+    display: none;
+  }
+  .item-card:hover .delete-btn { display: block; }
+
+  .empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* STATS */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .stat-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-num { font-size: 28px; font-weight: 700; color: var(--blue); }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .danger-btn {
+    width: 100%;
+    padding: 12px;
+    background: white;
+    color: var(--red);
+    border: 1.5px solid var(--red);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* Manual code input */
+  .manual-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .manual-row input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-size: 13px;
+    outline: none;
+  }
+  .manual-row button {
+    padding: 9px 14px;
+    background: var(--blue-light);
+    color: white;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">PKG-15 Stock Counter</div>
+    <div class="header-sub">Kalpataru Projects — Rabigh</div>
+  </div>
+  <div class="count-badge" id="header-count">0</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('scan')">📷 Scan</div>
+  <div class="tab" onclick="showTab('list')">📋 Items</div>
+  <div class="tab" onclick="showTab('summary')">📊 Summary</div>
+</div>
+
+<!-- SCAN PAGE -->
+<div class="page active" id="page-scan">
+  <div class="card">
+    <div class="card-title">Scan Barcode</div>
+    <div id="scanner-box"></div>
+    <button class="scan-btn start" id="scan-toggle-btn" onclick="toggleScanner()" style="margin-top:10px;">
+      Start Camera
+    </button>
+    <div class="manual-row">
+      <input type="text" id="manual-code" placeholder="Or type Item Code manually..." />
+      <button onclick="manualLookup()">Enter</button>
+    </div>
+  </div>
+
+  <div class="result-box" id="result-box">
+    <div class="result-item-code" id="r-itemcode"></div>
+    <div class="result-desc" id="r-desc"></div>
+    <div class="result-scanned" id="r-raw"></div>
+  </div>
+
+  <div class="card" id="entry-card" style="display:none;">
+    <div class="card-title">Enter Details</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Location (Bin / Rack / Area)</label>
+        <input type="text" id="inp-location" placeholder="e.g. Rack-A3, Bin-12, Yard-B" />
+      </div>
+      <div class="input-group">
+        <label>Physical QTY</label>
+        <input type="number" id="inp-qty" placeholder="0" min="0" inputmode="numeric" />
+      </div>
+    </div>
+    <button class="submit-btn" onclick="submitEntry()">✔ Submit &amp; Scan Next</button>
+  </div>
+</div>
+
+<!-- LIST PAGE -->
+<div class="page" id="page-list">
+  <div class="list-topbar">
+    <input class="search-input" type="text" placeholder="Search items..." oninput="renderList(this.value)" />
+    <button class="export-btn" onclick="exportExcel()">Export Excel</button>
+  </div>
+  <div id="list-container"></div>
+</div>
+
+<!-- SUMMARY PAGE -->
+<div class="page" id="page-summary">
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-items">0</div>
+      <div class="stat-label">Items Scanned</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-qty">0</div>
+      <div class="stat-label">Total QTY</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Session Info</div>
+    <div id="session-info" style="font-size:13px; color:var(--muted); line-height:1.8;"></div>
+  </div>
+  <button class="export-btn" style="width:100%; padding:14px; font-size:15px; border-radius:10px; margin-bottom:10px;" onclick="exportExcel()">
+    📥 Export to Excel
+  </button>
+  <button class="danger-btn" onclick="clearAll()">🗑 Clear All Data</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ─── DATA STORE ──────────────────────────────────────────────────────────────
+// All data lives inside this script block — embedded in the HTML file itself.
+// On save, we rewrite this file with updated DATA.
+let DATA = [];
+
+// Load from localStorage (keyed to this tool)
+const STORE_KEY = 'pkg15_stock_v1';
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) DATA = JSON.parse(raw);
+  } catch(e) { DATA = []; }
+}
+function saveData() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(DATA)); } catch(e) {}
+}
+loadData();
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'list') renderList('');
+  if (name === 'summary') renderSummary();
+}
+
+// ─── SCANNER ─────────────────────────────────────────────────────────────────
+let scanner = null;
+let scannerRunning = false;
+let lastScanned = '';
+
+function toggleScanner() {
+  if (scannerRunning) {
+    stopScanner();
+  } else {
+    startScanner();
+  }
+}
+
+function startScanner() {
+  // Check secure context — camera requires HTTPS or localhost
+  if (location.protocol === 'file:') {
+    showToast('Open this file from a web link (not directly), camera needs HTTPS', true);
+    alert('Camera will not work when opening this file directly (file://).\n\nThis file must be hosted online (HTTPS) or opened via a local web server. Please open the link provided, not the downloaded file directly.');
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('Camera not supported in this browser', true);
+    alert('Your browser does not support camera access. Please try Chrome or Safari (latest version).');
+    return;
+  }
+
+  const btn = document.getElementById('scan-toggle-btn');
+  btn.textContent = 'Starting camera...';
+  btn.disabled = true;
+
+  scanner = new Html5Qrcode('scanner-box');
+
+  Html5Qrcode.getCameras().then(cameras => {
+    if (!cameras || !cameras.length) {
+      throw new Error('No camera found on this device.');
+    }
+    // Prefer back/environment camera
+    let camId = cameras[0].id;
+    const backCam = cameras.find(c => /back|rear|environment/i.test(c.label));
+    if (backCam) camId = backCam.id;
+
+    return scanner.start(
+      camId,
+      { fps: 10, qrbox: { width: 250, height: 100 } },
+      onScanSuccess,
+      () => {}
+    );
+  }).then(() => {
+    btn.textContent = 'Stop Camera';
+    btn.className = 'scan-btn stop';
+    btn.disabled = false;
+    scannerRunning = true;
+  }).catch(err => {
+    btn.textContent = 'Start Camera';
+    btn.className = 'scan-btn start';
+    btn.disabled = false;
+    scannerRunning = false;
+    console.error('Camera error:', err);
+
+    let msg = 'Could not start camera.';
+    const errStr = String(err && err.message || err);
+    if (/Permission|NotAllowed/i.test(errStr)) {
+      msg = 'Camera permission denied. Please allow camera access in browser settings and reload.';
+    } else if (/NotFound|No camera/i.test(errStr)) {
+      msg = 'No camera found on this device.';
+    } else if (/NotReadable|TrackStart/i.test(errStr)) {
+      msg = 'Camera is being used by another app. Close other apps using the camera and try again.';
+    } else if (/secure|https/i.test(errStr)) {
+      msg = 'Camera requires a secure (HTTPS) connection.';
+    }
+    showToast(msg, true);
+    alert(msg);
+  });
+}
+
+function stopScanner() {
+  const btn = document.getElementById('scan-toggle-btn');
+  btn.textContent = 'Start Camera';
+  btn.className = 'scan-btn start';
+  scannerRunning = false;
+  if (scanner) {
+    scanner.stop().then(() => {
+      scanner.clear();
+      scanner = null;
+    }).catch(() => { scanner = null; });
+  }
+}
+
+function onScanSuccess(code) {
+  if (code === lastScanned) return;
+  lastScanned = code;
+  stopScanner();
+  processCode(code.trim());
+}
+
+function manualLookup() {
+  const code = document.getElementById('manual-code').value.trim();
+  if (!code) return;
+  processCode(code);
+  document.getElementById('manual-code').value = '';
+}
+
+function processCode(code) {
+  // Show result box
+  document.getElementById('r-itemcode').textContent = 'Item Code';
+  document.getElementById('r-desc').textContent = code;
+  document.getElementById('r-raw').textContent = 'Scanned: ' + code;
+  document.getElementById('result-box').className = 'result-box show';
+
+  // Store code for submission
+  window._currentCode = code;
+  window._currentDesc = code; // Will be just the code unless matched
+
+  // Show entry card
+  document.getElementById('entry-card').style.display = 'block';
+  document.getElementById('inp-qty').value = '';
+  document.getElementById('inp-location').value = '';
+  setTimeout(() => document.getElementById('inp-location').focus(), 300);
+}
+
+// ─── SUBMIT ──────────────────────────────────────────────────────────────────
+function submitEntry() {
+  const qty = document.getElementById('inp-qty').value.trim();
+  const loc = document.getElementById('inp-location').value.trim();
+  const code = window._currentCode || '';
+
+  if (!code) { showToast('Please scan an item first', true); return; }
+  if (!qty || isNaN(qty) || Number(qty) < 0) { showToast('Enter a valid QTY', true); return; }
+
+  const entry = {
+    id: Date.now(),
+    itemCode: code,
+    description: window._currentDesc || code,
+    location: loc,
+    qty: Number(qty),
+    time: new Date().toLocaleString('en-GB')
+  };
+
+  DATA.push(entry);
+  saveData();
+  updateHeaderCount();
+
+  // Reset scan UI
+  document.getElementById('result-box').className = 'result-box';
+  document.getElementById('entry-card').style.display = 'none';
+  lastScanned = '';
+  window._currentCode = '';
+
+  showToast('✔ Saved! Scan next item');
+
+  // Auto-restart scanner
+  setTimeout(() => startScanner(), 800);
+}
+
+// ─── LIST ────────────────────────────────────────────────────────────────────
+function renderList(query) {
+  const container = document.getElementById('list-container');
+  const q = (query || '').toLowerCase();
+  const filtered = DATA.filter(d =>
+    d.itemCode.toLowerCase().includes(q) ||
+    (d.description || '').toLowerCase().includes(q) ||
+    (d.location || '').toLowerCase().includes(q)
+  );
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="icon">📦</div>
+      <p>${DATA.length ? 'No items match your search.' : 'No items scanned yet.<br>Go to Scan tab to start.'}</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map((d, i) => `
+    <div class="item-card">
+      <div class="item-card-top">
+        <div class="item-desc">${esc(d.description)}</div>
+        <div class="item-qty-badge">${d.qty}</div>
+      </div>
+      <div class="item-meta">
+        <span>🔖 ${esc(d.itemCode)}</span>
+        ${d.location ? `<span>📍 ${esc(d.location)}</span>` : ''}
+        <span>🕐 ${d.time}</span>
+      </div>
+      <button class="delete-btn" onclick="deleteEntry(${d.id})" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  DATA = DATA.filter(d => d.id !== id);
+  saveData();
+  updateHeaderCount();
+  renderList('');
+}
+
+// ─── SUMMARY ─────────────────────────────────────────────────────────────────
+function renderSummary() {
+  document.getElementById('stat-items').textContent = DATA.length;
+  const totalQty = DATA.reduce((s, d) => s + d.qty, 0);
+  document.getElementById('stat-qty').textContent = totalQty;
+
+  const info = document.getElementById('session-info');
+  if (!DATA.length) {
+    info.innerHTML = 'No data yet.';
+    return;
+  }
+  const first = DATA[0].time;
+  const last = DATA[DATA.length - 1].time;
+  const locs = [...new Set(DATA.map(d => d.location).filter(Boolean))];
+  info.innerHTML = `
+    First scan: <b>${first}</b><br>
+    Last scan: <b>${last}</b><br>
+    Locations: <b>${locs.length ? locs.join(', ') : '—'}</b>
+  `;
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+function exportExcel() {
+  if (!DATA.length) { showToast('No data to export', true); return; }
+
+  const rows = DATA.map(d => ({
+    'Item Code': d.itemCode,
+    'Description': d.description,
+    'Location': d.location || '',
+    'Physical QTY': d.qty,
+    'Scan Time': d.time
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  // Column widths
+  ws['!cols'] = [
+    {wch: 22}, {wch: 35}, {wch: 18}, {wch: 14}, {wch: 20}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Stock Count');
+
+  const date = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `PKG15_StockCount_${date}.xlsx`);
+  showToast('Excel exported!');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function updateHeaderCount() {
+  document.getElementById('header-count').textContent = DATA.length;
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#c0392b' : '#1a7a3a';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function clearAll() {
+  if (!confirm('Delete ALL scanned data? This cannot be undone.')) return;
+  DATA = [];
+  saveData();
+  updateHeaderCount();
+  showToast('All data cleared');
+  renderSummary();
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Init
+updateHeaderCount();
+
+// Allow pressing Enter on QTY field to submit
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('entry-card').style.display !== 'none') {
+    submitEntry();
+  }
+});
+</script>
+</body>
+</html>
